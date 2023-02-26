@@ -2,6 +2,9 @@
 ---- MODULE model ----
 EXTENDS TLC, Actor
 
+(*Test constraint: *)
+LengthConstraint == /\ Len(inbox) < 3
+                    /\ Len(outbox) < 3
 
 (* Test Invariants *)
 MailboxesEmpty ==   \/  /\ inbox = <<>>
