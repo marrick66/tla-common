@@ -1,66 +1,33 @@
 ---- MODULE Actor ----
 
 (* This abstraction of an actor supports: 
-    - Receiving a message from it's inbox
+    - Receiving a message to it's inbox
     - Sending a message to it's outbox (possibly back to itself)
-    - Some abstract processing action to be refined later
+    - Initiate processing of a received message
+    - Finish processing of the current message
+    
+    This isn't a full specification, since there isn't a refinement
+    mapping for the records the actor system uses to keep track
+    of individual actors.
 *)
 
-EXTENDS TLC, Sequences, Naturals
+EXTENDS TLC, Sequences, Naturals, Envelope
 
-CONSTANT Msg, NoMsg, Address
+ActorState == [addr: Address, inbox: Mailbox, outbox: Mailbox, currMsg: PossibleMessages]
 
-VARIABLES currentMsg, outbox, inbox, currentAddr
+ToOutbox(env, state) ==
+    [state EXCEPT !.outbox = Append(@, env)]
 
-(* Auxilary definitions *)
-vars == <<currentMsg, outbox, inbox, currentAddr>>
+ToInbox(env, state) == 
+    [state EXCEPT !.inbox = Append(@, env)]
 
-PossibleMessages == Msg \union { NoMsg }
+ToEnvelope(to, msg) ==
+    [to |-> to, msg |-> msg]
 
-(* An envelope is needed for routing and responding to actors:  *)
-Envelope == [to: Address, msg: Msg]
+StartProcessing(state) == LET env == Head(state.inbox) IN 
+    [state EXCEPT !.inbox = Tail(@), !.currMsg = env.msg]
 
-(* Type correctness invariant: *)
-TypeOk ==   /\ currentMsg \in PossibleMessages
-            /\ outbox \in Seq(Envelope)
-            /\ inbox \in Seq(Envelope)
-            /\ currentAddr \in Address
-
-Init == /\ inbox = <<>>
-        /\ outbox = <<>>
-        /\ currentMsg = NoMsg
-        /\ currentAddr \in Address
-
-ToOutbox(to, msg) ==    /\ outbox' = Append(outbox, [to |-> to, msg |-> msg])
-                        /\ UNCHANGED <<currentMsg, inbox, currentAddr>>
-
-ToInbox(to, msg) == /\ to = currentAddr
-                    /\ inbox' = Append(inbox, [to |-> to, msg |-> msg])
-                    /\ UNCHANGED <<currentMsg, outbox, currentAddr>>
-
-Receive ==  /\ currentMsg = NoMsg
-            /\ Len(inbox) > 0
-            /\ currentMsg' = Head(inbox).msg
-            /\ inbox' = Tail(inbox)
-            /\ UNCHANGED <<outbox,currentAddr>>
-
-Process ==  /\ currentMsg # NoMsg
-            /\ currentMsg' = NoMsg
-            /\ UNCHANGED <<outbox, inbox, currentAddr>>
-
-Next == \/ (\E to \in Address, msg \in Msg: ToOutbox(to, msg))
-        \/ (\E to \in Address, msg \in Msg: ToInbox(to, msg))
-        \/ Receive
-        \/ Process
-
-
-Spec == Init /\ [][Next]_vars /\ WF_vars(Next)
-
-(* Other invariants: *)
-MessagesSentToCorrectActor == \A index \in 1..Len(inbox): inbox[index].to = currentAddr
-
-(* Temporal properties: *)
-MessageEventuallyReceived == \E to \in Address, msg \in Msg: WF_vars(ToInbox(to, msg)) /\ WF_vars(Receive)
-MessageEventuallyProcessed == WF_vars(Receive) /\ WF_vars(Process)
+FinishProcessing(state) == 
+    [state EXCEPT !.currMsg = NoMsg]
 
 ====
