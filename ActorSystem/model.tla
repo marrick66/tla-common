@@ -15,23 +15,26 @@ ModelInit == /\ op_count = 0
 ModelToOutbox(from, to, msg) == /\ ToOutbox(from, to, msg)
                                 /\ op_count' = op_count + 1
                             
-ModelToInbox(from, to, msg) ==  /\ ToInbox(from, to, msg)
-                                /\ op_count' = op_count + 1
-
 ModelStartProcessing(addr) ==   /\ StartProcessing(addr)
                                 /\ op_count' = op_count + 1
 
 ModelFinishProcessing(addr) ==  /\ FinishProcessing(addr)
                                 /\ op_count' = op_count + 1
 
-ModelNext == \/ \E to, from \in Address, msg \in Msg : ModelToOutbox(from, to, msg) \/ ModelToInbox(from, to, msg)
-        \/ \E addr \in Address: ModelStartProcessing(addr) \/ ModelFinishProcessing(addr)
+ModelSend(addr) == /\ Send(addr)
+                   /\ op_count' = op_count + 1
+
+ModelNext == \/ \E to, from \in Address, msg \in Msg : ModelToOutbox(from, to, msg)
+        \/ \E addr \in Address: ModelStartProcessing(addr) \/ ModelFinishProcessing(addr) \/ ModelSend(addr)
     
 ModelSpec == ModelInit /\ [][ModelNext]_vars /\ WF_vars(Next)
 
 (* Model constraints: *)
-NoMailboxHasMoreThanTwoEnvelopes == \A addr \in Address: Len(actors[addr].inbox) <= 2 /\ Len(actors[addr].outbox) <= 2
+NoMailboxHasMoreThanTwoEnvelopes == \A addr \in Address: 
+    Len(actors[addr].inbox) <= 2 /\ Len(actors[addr].outbox) <= 2
+
 NoMoreThanNumOperations(num) == op_count <= num
+
 NoMoreThanFourOperations == NoMoreThanNumOperations(4)
 
 
@@ -46,5 +49,4 @@ MessageEventuallyReceived == \A addr \in Address:
     LET inbox == actors[addr].inbox IN 
     Len(inbox) > 0 => WF_vars(StartProcessing(addr))
     
-
 ====

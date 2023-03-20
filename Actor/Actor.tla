@@ -18,6 +18,9 @@ ActorState == [addr: Address, inbox: Mailbox, outbox: Mailbox, currMsg: Possible
 ToOutbox(env, state) ==
     [state EXCEPT !.outbox = Append(@, env)]
 
+FromOutbox(state) == 
+    [state EXCEPT !.outbox = Tail(@)]
+
 ToInbox(env, state) == 
     [state EXCEPT !.inbox = Append(@, env)]
 
