@@ -15,22 +15,22 @@ EXTENDS TLC, Sequences, Naturals, Envelope
 
 ActorState == [addr: Address, inbox: Mailbox, outbox: Mailbox, currMsg: PossibleMessages]
 
-ToOutbox(env, state) ==
+ToOutbox[env \in Envelope, state \in ActorState] ==
     [state EXCEPT !.outbox = Append(@, env)]
 
-FromOutbox(state) == 
+FromOutbox[state \in ActorState] == 
     [state EXCEPT !.outbox = Tail(@)]
 
-ToInbox(env, state) == 
+ToInbox[env \in Envelope, state \in ActorState] == 
     [state EXCEPT !.inbox = Append(@, env)]
 
-ToEnvelope(to, msg) ==
+ToEnvelope[to \in Address, msg \in Msg] ==
     [to |-> to, msg |-> msg]
 
-StartProcessing(state) == LET env == Head(state.inbox) IN 
+StartProcessing[state \in ActorState] == LET env == Head(state.inbox) IN 
     [state EXCEPT !.inbox = Tail(@), !.currMsg = env.msg]
 
-FinishProcessing(state) == 
+FinishProcessing[state \in ActorState] == 
     [state EXCEPT !.currMsg = NoMsg]
 
 ====

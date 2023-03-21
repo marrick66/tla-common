@@ -8,5 +8,5 @@ CONSTANT Address
 Envelope == [to: Address, msg: Msg]
 
 (* Actors have both an inbox and outbox that use these: *)
-Mailbox == Seq(Envelope) \union { <<>> }
+Mailbox == Seq(Envelope)
 ====
